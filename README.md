@@ -6,8 +6,6 @@ Program uses sample set of 400 digits (40 of each digit) from Semeion handwritte
 
 Example values for testing: 2 layers, 100 nodes, 500 epochs
 
-Digit viewer uses SDL2 https://www.libsdl.org/. Left and right arrows keys cycle between digits. A -key displays all digits.
-
 Program doesn't run after building?
 
 Make sure to include "semeion_sample.data" in your build directory.
