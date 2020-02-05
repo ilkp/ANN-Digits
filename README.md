@@ -6,6 +6,9 @@ Program uses sample set of 400 digits (40 of each digit) from Semeion handwritte
 
 Example values for testing: 2 layers, 100 nodes, 500 epochs
 
+* More epochs and less nodes seems to be better than the other way around
+* High number of layers destroys the results
+
 Program doesn't run after building?
 
 Make sure to include "semeion_sample.data" in your build directory.
