@@ -6,17 +6,17 @@
 class Network
 {
 private:
-	Layer* _inputLayer;
-	Layer* _outputLayer;
+	Layer* _inputLayer = nullptr;
+	Layer* _outputLayer = nullptr;
 	void propagateForward();
-	void propagateBackward(const std::vector<float> labels);
+	void propagateBackward(const float* const labels);
 
 public:
 	Network();
 	~Network();
-	void Init(int inputSize, int hiddenSize, int outputSize, int hiddenLayers);
-	void Epoch(const std::vector<InputData> inputData, float learningRate);
-	std::vector<float> Test(std::vector<float> inputData);
+	void Init(const int inputSize, const int hiddenSize, const int outputSize, const int hiddenLayers);
+	void Epoch(const InputData* const inputData, const int inputSize, const float learningRate);
+	float* Test(const float* const inputData);
 	void Clean();
 };
 

@@ -1,34 +1,32 @@
 #pragma once
-#include <vector>
 
 class Layer
 {
 private:
-	std::vector<std::vector<float>> _weights;
-	std::vector<std::vector<float>> _deltaWeights;
-	std::vector<float> _biases;
-	std::vector<float> _deltaBiases;
-	std::vector<float> _outputs;
-	std::vector<float> _error;
+	float* _weights = nullptr;
+	float* _deltaWeights = nullptr;
+	float* _biases = nullptr;
+	float* _deltaBiases = nullptr;
+	float* _outputs = nullptr;
+	float* _error = nullptr;
 
 public:
 	int _layerSize;
-	Layer* _prevLayer;
-	Layer* _nextLayer;
+	Layer* _prevLayer = nullptr;
+	Layer* _nextLayer = nullptr;
 	Layer(Layer* previousLayer, int layerSize);
 	~Layer();
 
 	void propagationForward();
 	void propagationBackward();
 	void calculateDelta();
-	void update(float learningRate, int epochs);
+	void update(const float learningRate, const int epochs);
 
-	void setNextLayer(Layer* nextLayer) { _nextLayer = nextLayer; }
-	void setOutputs(std::vector<float> outputs) { _outputs = outputs; }
-	void setError(int node, float correctOutput) { _error.at(node) = _outputs.at(node) - correctOutput; }
+	void setNextLayer(Layer* nextLayer)							{ _nextLayer = nextLayer; }
+	void setError(const int node, const float correctOutput)	{ _error[node] = _outputs[node] - correctOutput; }
+	void setOutputs(const float* const outputs)					{ for (int i = 0; i < _layerSize; ++i) { _outputs[i] = outputs[i]; }; }
 
-	float getOutput(int node) { return _outputs.at(node); }
-	std::vector<float> getOutput() { return _outputs; }
-	float getWeight(int node, int w) { return _weights.at(node)[w]; }
+	float* getOutput() const									{ return _outputs; }
+	float getOutput(const int node) const						{ return _outputs[node]; }
 };
 

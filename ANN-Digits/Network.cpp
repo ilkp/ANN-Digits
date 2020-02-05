@@ -12,7 +12,7 @@ Network::~Network()
 	Clean();
 }
 
-void Network::Init(int inputSize, int hiddenSize, int outputSize, int hiddenLayers)
+void Network::Init(const int inputSize, const int hiddenSize, const int outputSize, const int hiddenLayers)
 {
 	_inputLayer = new Layer(nullptr, inputSize);
 	Layer* lastLayer = _inputLayer;
@@ -26,24 +26,24 @@ void Network::Init(int inputSize, int hiddenSize, int outputSize, int hiddenLaye
 	lastLayer->_nextLayer = _outputLayer;
 }
 
-void Network::Epoch(const std::vector<InputData> inputData, float learningRate)
+void Network::Epoch(const InputData* const inputData, const int inputSize, const float learningRate)
 {
 	Layer* l;
-	for (int dataElement = 0; dataElement < inputData.size(); dataElement++)
+	for (int i = 0; i < inputSize; ++i)
 	{
-		_inputLayer->setOutputs(inputData.at(dataElement)._input);
+		_inputLayer->setOutputs(inputData[i]._input);
 		propagateForward();
-		propagateBackward(inputData.at(dataElement)._label);
+		propagateBackward(inputData[i]._label);
 	}
 	l = _outputLayer;
 	while (l->_prevLayer != nullptr)
 	{
-		l->update(learningRate, inputData.size());
+		l->update(learningRate, inputSize);
 		l = l->_prevLayer;
 	}
 }
 
-std::vector<float> Network::Test(std::vector<float> inputData)
+float* Network::Test(const float* const inputData)
 {
 	_inputLayer->setOutputs(inputData);
 	propagateForward();
@@ -60,12 +60,12 @@ void Network::propagateForward()
 	}
 }
 
-void Network::propagateBackward(const std::vector<float> labels)
+void Network::propagateBackward(const float* const labels)
 {
 	Layer* l = _outputLayer->_prevLayer;
 	for (int i = 0; i < _outputLayer->_layerSize; i++)
 	{
-		_outputLayer->setError(i, labels.at(i));
+		_outputLayer->setError(i, labels[i]);
 	}
 	_outputLayer->calculateDelta();
 

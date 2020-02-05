@@ -1,66 +1,84 @@
-
-
 #include <iostream>
 #include <string>
 #include <fstream>
 #include <time.h>
-#include <stdlib.h>
-#include <vector>
 #include <iomanip>
-#include <map>
 #include <time.h>
 #include <chrono>
 #include <ctime>
 #include <direct.h>
+#include <algorithm>
 #include "Layer.h"
 #include "InputData.h"
 #include "Network.h"
 
-#define ELEMENTS 1593
+#define ELEMENTS 400
+#define DIGIT_PER_SET 20
 #define DATA_WIDTH 256
-#define HIDDEN_LAYER_SIZE 10
 #define LABEL_SIZE 10
 
-std::vector<std::vector<float>> parseFile(const std::string fileName, const int elements, const int dataWidth);
-void userNetworkSettings(int* layers, int* nodes, int* epochs);
-void trainNetwork(const int epochs, Network* network, const std::vector<InputData> teachingData);
-void testNetwork_digits(bool printValues, bool printInstances, Network* network, const std::vector<InputData> testingData);
-float MSELoss(std::vector<float> output, std::vector<float> label);
-int labelToInt(std::vector<float> label);
-int networkOutputToInt(std::vector<float> output);
-void initializeTrainingSets(const int digitsPerSet, const std::vector<std::vector<float>> data, std::vector<InputData>* trainingData, std::vector<InputData>* testingData);
-void printAnswerTableInstances(int answerTable[10][10]);
-void printAnswerTableValues(float answerTable[10][10]);
-
-
+bool parseFile(const std::string& fileName, float* const data);
+void userNetworkSettings(int* const layers, int* const nodes, int* const epochs);
+void trainNetwork(const int epochs, Network* const network, const InputData* const teachingSet, const int teachingSetSize);
+void testNetwork_digits(const bool printValues, const bool printInstances, Network* const network, const InputData* const testingData, int testinDataSize);
+//float MSELoss(std::vector<float> output, std::vector<float> label);
+int labelToInteger(const float* const label);
+int networkOutputToInteger(const float* const output);
+void initializeTrainingSets(InputData* trainingSet, InputData* testingSet, float* const data, float labels[LABEL_SIZE][LABEL_SIZE]);
+void printAnswerTableInstances(int answerTable[LABEL_SIZE][LABEL_SIZE]);
+void printAnswerTableValues(float answerTable[LABEL_SIZE][LABEL_SIZE]);
 
 int main()
 {
-	bool programRunning = true;
-	std::string quitMessage;
-	int hiddenSize, layers, epochs;
-	Network network;
 	srand(time(NULL));
-	std::vector<std::vector<float>> data = parseFile("semeion_sample.data", 400, DATA_WIDTH);
-	if (data.size() == 0)
+	int hiddenSize, layers, epochs;
+	bool programRunning = true;
+	float* data = new float[ELEMENTS * DATA_WIDTH];
+	std::string quitMessage;
+	Network network;
+
+	float labels[LABEL_SIZE][LABEL_SIZE] =
+	{
+		{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f },
+		{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f }
+	};
+
+	if (!parseFile("semeion_sample.data", data))
 	{
 		return -1;
 	}
 
-	std::vector<InputData> trainingData;
-	std::vector<InputData> testingData;
-	initializeTrainingSets(20, data, &trainingData, &testingData);
+	InputData trainingSet[LABEL_SIZE * DIGIT_PER_SET];
+	InputData testingSet[LABEL_SIZE * DIGIT_PER_SET];
+
+	initializeTrainingSets(trainingSet, testingSet, data, labels);
+
 	while (programRunning)
 	{
 		userNetworkSettings(&layers, &hiddenSize, &epochs);
 
+		//DEBUG VALUES
+		//layers = 5;
+		//hiddenSize = 400;
+		//epochs = 100;
+
 		std::cout << "Initializing network with " << layers << " hidden layers with " << hiddenSize << " nodes." << std::endl;
-		network.Init(DATA_WIDTH, hiddenSize, 10, layers);
+		network.Init(DATA_WIDTH, hiddenSize, LABEL_SIZE, layers);
 		std::cout << "\n------------------------------------------\n" << std::endl;
 		std::cout << "Initial neural network results.\n" << std::endl;
-		testNetwork_digits(true, true, &network, testingData);
-		trainNetwork(epochs, &network, trainingData);
-		testNetwork_digits(true, true, &network, testingData);
+
+		testNetwork_digits(true, true, &network, testingSet, LABEL_SIZE * DIGIT_PER_SET);
+		trainNetwork(epochs, &network, trainingSet, ELEMENTS / 2);
+		testNetwork_digits(true, true, &network, testingSet, LABEL_SIZE * DIGIT_PER_SET);
+
 		std::cout << "Quit? (y/n): ";
 		quitMessage = "";
 		while (quitMessage.length() == 0 || !(quitMessage.at(0) == 'y' || quitMessage.at(0) == 'n'))
@@ -82,7 +100,7 @@ int main()
 // 2 layers
 // 50-100 nodes
 // 500 epoch
-void userNetworkSettings(int* layers, int* nodes, int* epochs)
+void userNetworkSettings(int* const layers, int* const nodes, int* const epochs)
 {
 	std::cout << "Enter number of hidden layers: ";
 	std::cin >> *layers;
@@ -110,32 +128,29 @@ void userNetworkSettings(int* layers, int* nodes, int* epochs)
 	}
 }
 
-std::vector<std::vector<float>> parseFile(const std::string fileName, const int elements, const int dataWidth)
+bool parseFile(const std::string& fileName, float* const data)
 {
 	char cCurrentPath[FILENAME_MAX];
 	std::string path = _getcwd(cCurrentPath, sizeof(cCurrentPath));
-	std::vector<std::vector<float>> data;
 	std::string line;
 	std::ifstream file;
 	file.open(path + "\\" + fileName);
 	if (!file.is_open())
 	{
 		std::cout << "Failed to open file" << std::endl;
-		return data;
+		return false;
 	}
 
-	for (int i = 0; i < elements; i++)
+	for (int i = 0; i < ELEMENTS; ++i)
 	{
-		std::vector<float> dataElement;
 		std::getline(file, line);
-		for (int j = 0; j < dataWidth; j++)
+		for (int j = 0; j < DATA_WIDTH; ++j)
 		{
-			dataElement.push_back(float(line.at(j * 2) - '0'));
+			data[i * DATA_WIDTH + j] = float(line.at(j) - '0');
 		}
-		data.push_back(dataElement);
 	}
 	file.close();
-	return data;
+	return true;
 }
 
 /*
@@ -145,7 +160,7 @@ std::vector<std::vector<float>> parseFile(const std::string fileName, const int 
 	Momentum
 	Batch training
 */
-void trainNetwork(int epochs, Network* network, const std::vector<InputData> teachingData)
+void trainNetwork(const int epochs, Network* const network, const InputData* const teachingSet, const int teachingSetSize)
 {
 	int seconds, minutes, hours;
 	const int testEpochs = 3;
@@ -162,7 +177,7 @@ void trainNetwork(int epochs, Network* network, const std::vector<InputData> tea
 	// Estimate and print a time needed for the whole training run
 	for (int i = 0; i < testEpochs && i <= epochs; i++)
 	{
-		network->Epoch(teachingData, learningSpeed);
+		network->Epoch(teachingSet, teachingSetSize, learningSpeed);
 	}
 	auto end = std::chrono::system_clock::now();
 	dT = end - start;
@@ -174,7 +189,7 @@ void trainNetwork(int epochs, Network* network, const std::vector<InputData> tea
 	// Training runs
 	for (int i = 0; i < epochs - testEpochs; i++)
 	{
-		network->Epoch(teachingData, learningSpeed);
+		network->Epoch(teachingSet, teachingSetSize, learningSpeed);
 	}
 	end = std::chrono::system_clock::now();
 	now = std::time(0);
@@ -190,35 +205,35 @@ void trainNetwork(int epochs, Network* network, const std::vector<InputData> tea
 }
 
 // Note: hard coded for digit recognition
-void testNetwork_digits(bool printValues, bool printInstances, Network* network, const std::vector<InputData> testingData)
+void testNetwork_digits(const bool printValues, const bool printInstances, Network* const network, const InputData* const testingSet, int testingSetSize)
 {
 	float loss = 0.0f;
-	std::vector<float> networkOutput;
+	float* networkOutput;
 	int networksAnswer;
 	int input;
-	int answerTable[10][10];
-	float answerTableValues[10][10];
-	for (int i = 0; i < 10; i++)
+	int answerTable[LABEL_SIZE][LABEL_SIZE];
+	float answerTableValues[LABEL_SIZE][LABEL_SIZE];
+	for (int i = 0; i < LABEL_SIZE; ++i)
 	{
-		for (int j = 0; j < 10; j++)
+		for (int j = 0; j < LABEL_SIZE; ++j)
 		{
 			answerTable[i][j] = 0;
 			answerTableValues[i][j] = 0.0f;
 		}
 	}
-	for (int i = 0; i < testingData.size(); i++)
+	for (int i = 0; i < testingSetSize; ++i)
 	{
-		networkOutput = network->Test(testingData.at(i)._input);
-		networksAnswer = networkOutputToInt(networkOutput);
-		input = labelToInt(testingData.at(i)._label);
+		networkOutput = network->Test(testingSet[i]._input);
+		networksAnswer = networkOutputToInteger(networkOutput);
+		input = labelToInteger(testingSet[i]._label);
 		answerTable[input][networksAnswer]++;
-		for (int j = 0; j < 10; j++)
+		for (int j = 0; j < LABEL_SIZE; j++)
 		{
-			answerTableValues[input][j] += networkOutput.at(j);
+			answerTableValues[input][j] += networkOutput[j];
 		}
 		//loss += MSELoss(network->_outputLayer->getOutput(), testingData.at(i)._label);
 	}
-	loss /= testingData.size();
+	loss /= testingSetSize;
 	if (printValues)
 	{
 		printAnswerTableValues(answerTableValues);
@@ -230,14 +245,14 @@ void testNetwork_digits(bool printValues, bool printInstances, Network* network,
 	std::cout << "------------------------------------------\n" << std::endl;
 }
 
-void printAnswerTableValues(float answerTable[10][10])
+void printAnswerTableValues(float answerTable[LABEL_SIZE][LABEL_SIZE])
 {
 	std::cout << "Input\t\tNetwork's answer" << std::endl;
 	std::cout << "\t0\t1\t2\t3\t4\t5\t6\t7\t8\t9\n" << std::endl;
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < LABEL_SIZE; ++i)
 	{
 		std::cout << i << "\t";
-		for (int j = 0; j < 10; j++)
+		for (int j = 0; j < LABEL_SIZE; ++j)
 		{
 			std::cout << std::fixed << std::setprecision(4) << answerTable[i][j] / 20 << "\t";
 		}
@@ -246,14 +261,14 @@ void printAnswerTableValues(float answerTable[10][10])
 	std::cout << "\n";
 }
 
-void printAnswerTableInstances(int answerTable[10][10])
+void printAnswerTableInstances(int answerTable[LABEL_SIZE][LABEL_SIZE])
 {
 	std::cout << "Input\t\tNetwork's answer" << std::endl;
 	std::cout << "\t0\t1\t2\t3\t4\t5\t6\t7\t8\t9\n" << std::endl;
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < LABEL_SIZE; ++i)
 	{
 		std::cout << i << "\t";
-		for (int j = 0; j < 10; j++)
+		for (int j = 0; j < LABEL_SIZE; ++j)
 		{
 			std::cout << answerTable[i][j] << "\t";
 		}
@@ -262,11 +277,11 @@ void printAnswerTableInstances(int answerTable[10][10])
 	std::cout << "\n";
 }
 
-int labelToInt(std::vector<float> label)
+int labelToInteger(const float* const label)
 {
-	for (int i = 0; i < label.size(); i++)
+	for (int i = 0; i < LABEL_SIZE; ++i)
 	{
-		if (label.at(i) >= 1.0f)
+		if (label[i] >= 1.0f)
 		{
 			return i;
 		}
@@ -274,54 +289,48 @@ int labelToInt(std::vector<float> label)
 	return -1;
 }
 
-int networkOutputToInt(std::vector<float> output)
+int networkOutputToInteger(const float* const output)
 {
-	float largest = output.at(0);
+	float largest = output[0];
 	int n = 0;
-	for (int i = 1; i < output.size(); i++)
+	for (int i = 1; i < LABEL_SIZE; ++i)
 	{
-		if (output.at(i) > largest)
+		if (output[i] > largest)
 		{
-			largest = output.at(i);
+			largest = output[i];
 			n = i;
 		}
 	}
 	return n;
 }
 
-float MSELoss(std::vector<float> output, std::vector<float> label)
-{
-	float loss = 0.0f;
-	for (int i = 0; i < output.size(); i++)
-	{
-		loss += (output.at(i) - label.at(i)) * (output.at(i) - label.at(i));
-	}
-	loss *= 0.5f;
-	return loss;
-}
+//float MSELoss(std::vector<float> output, std::vector<float> label)
+//{
+//	float loss = 0.0f;
+//	for (int i = 0; i < output.size(); ++i)
+//	{
+//		loss += (output.at(i) - label.at(i)) * (output.at(i) - label.at(i));
+//	}
+//	loss *= 0.5f;
+//	return loss;
+//}
 
 // digitsPerSet is the number of a single digit per set. For example semeion_sample.data has 40 of each digits, so we will want 20 digits for each data set.
-void initializeTrainingSets(const int digitsPerSet, const std::vector<std::vector<float>> data, std::vector<InputData>* trainingData, std::vector<InputData>* testingData)
+void initializeTrainingSets(InputData* trainingSet, InputData* testingSet, float* const data, float labels[LABEL_SIZE][LABEL_SIZE])
 {
-	std::vector<std::vector<float>> labels;
-	labels.push_back(std::vector<float>{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f });
-	labels.push_back(std::vector<float>{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f });
-
-
-	for (int i = 0; i < 10; i++)
+	const unsigned int testingSetOffset = DATA_WIDTH * DIGIT_PER_SET;
+	unsigned int digitStartPos;
+	for (int i = 0; i < LABEL_SIZE; ++i)
 	{
-		for (int j = 0; j < digitsPerSet; j++)
+		digitStartPos = i * DATA_WIDTH * DIGIT_PER_SET * 2;
+
+		for (int j = 0; j < DIGIT_PER_SET; ++j)
 		{
-			trainingData->push_back(InputData{ labels.at(i), data.at(i * digitsPerSet * 2 + j) });
-			testingData->push_back(InputData{ labels.at(i), data.at(i * digitsPerSet * 2 + digitsPerSet + j) });
+			trainingSet[i * DIGIT_PER_SET + j]._input = &data[digitStartPos + j * DATA_WIDTH];
+			testingSet[i * DIGIT_PER_SET + j]._input = &data[digitStartPos + testingSetOffset + j * DATA_WIDTH];
+
+			trainingSet[i * DIGIT_PER_SET + j]._label = labels[i];
+			testingSet[i * DIGIT_PER_SET + j]._label = labels[i];
 		}
 	}
 }
