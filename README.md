@@ -13,7 +13,7 @@ Program doesn't run after building?
 
 Make sure to include "semeion_sample.data" in your build directory.
 
-Results before running training
+Results before training
 
 ![ann1](https://user-images.githubusercontent.com/28627738/73890567-f3b29b00-487a-11ea-9a47-6adf38680ea3.png)
 
